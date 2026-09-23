@@ -1,0 +1,107 @@
+<!-- Created by Erion Nezha — © 2026 All rights reserved -->
+<!DOCTYPE html>
+<html lang="sq">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Snake Game — Demo</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{font-family:'Courier New',monospace;background:#000;color:#0f0;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:12px;touch-action:none}
+h1{font-size:1.3rem;margin-bottom:6px;color:#0f0;text-shadow:0 0 8px #0f0}
+#score{font-size:1rem;margin-bottom:8px;color:#ff0}
+#wrap{position:relative}
+canvas{background:#000;border:2px solid #0f0;border-radius:8px;max-width:94vw;max-height:70vh;display:block}
+#overlay{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#000000cc;border-radius:8px;text-align:center;padding:20px}
+#overlay.hidden{display:none}
+#overlay h2{color:#0f0;margin-bottom:10px;font-size:1.4rem}
+#overlay p{color:#9fb3c8;font-size:.85rem;margin-bottom:14px;line-height:1.6}
+button{font-family:inherit;background:#0f0;color:#000;border:none;padding:12px 28px;font-size:1rem;font-weight:bold;border-radius:8px;cursor:pointer}
+.hint{color:#4a5568;font-size:.75rem;margin-top:10px;text-align:center;line-height:1.6}
+footer{margin-top:10px;color:#4a5568;font-size:.75rem}
+footer strong{color:#9fb3c8}
+</style>
+</head>
+<body>
+<h1>🐍 SNAKE GAME</h1>
+<div id="score">Pikë: 0 &nbsp;|&nbsp; Rekord: 0</div>
+<div id="wrap">
+<canvas id="c" width="600" height="600"></canvas>
+<div id="overlay"><h2 id="otitle">Mirë se erdhe!</h2><p id="otext">Ha mollët e kuqe 🍎 për pikë.<br>Mos u përplas në mur ose në veten!</p><button id="obtn">▶️ Luaj</button></div>
+</div>
+<div class="hint">⌨️ Shigjetat / WASD për lëvizje &nbsp;•&nbsp; 📱 Rrëshqit gishtin në celular</div>
+<footer>Krijuar nga <strong>Erion Nezha</strong> — © 2026</footer>
+<script>
+const cv=document.getElementById('c'),ctx=cv.getContext('2d');
+const N=30,SZ=20;
+let snake,dir,ndir,apple,score,best,alive,speed,last=0;
+best=parseInt(localStorage.getItem('snake_best')||'0');
+function reset(){
+  snake=[{x:15,y:15},{x:14,y:15},{x:13,y:15}];
+  dir={x:1,y:0};ndir={x:1,y:0};score=0;alive=true;speed=110;
+  placeApple();updScore();
+}
+function placeApple(){
+  while(true){const a={x:Math.floor(Math.random()*N),y:Math.floor(Math.random()*N)};
+    if(!snake.some(s=>s.x===a.x&&s.y===a.y)){apple=a;break;}}
+}
+function updScore(){document.getElementById('score').textContent='Pikë: '+score+'  |  Rekord: '+Math.max(best,score);}
+function step(){
+  dir=ndir;
+  const h={x:snake[0].x+dir.x,y:snake[0].y+dir.y};
+  if(h.x<0||h.y<0||h.x>=N||h.y>=N||snake.some(s=>s.x===h.x&&s.y===h.y)){return gameOver();}
+  snake.unshift(h);
+  if(h.x===apple.x&&h.y===apple.y){score+=10;if(score>best){best=score;localStorage.setItem('snake_best',best);}speed=Math.max(55,speed-3);placeApple();}
+  else{snake.pop();}
+  updScore();
+}
+function draw(){
+  ctx.fillStyle='#000';ctx.fillRect(0,0,600,600);
+  ctx.fillStyle='#f00';
+  ctx.beginPath();ctx.arc(apple.x*SZ+SZ/2,apple.y*SZ+SZ/2,SZ/2-2,0,7);ctx.fill();
+  ctx.fillStyle='#fff';ctx.fillRect(apple.x*SZ+SZ/2-3,apple.y*SZ+2,4,6);
+  snake.forEach((s,i)=>{
+    ctx.fillStyle=i===0?'#0f0':'#0a0';
+    ctx.fillRect(s.x*SZ+1,s.y*SZ+1,SZ-2,SZ-2);
+    if(i===0){ctx.fillStyle='#000';ctx.fillRect(s.x*SZ+5,s.y*SZ+5,3,3);ctx.fillRect(s.x*SZ+12,s.y*SZ+5,3,3);}
+  });
+}
+function loop(t){
+  if(!alive)return;
+  if(t-last>speed){last=t;step();draw();}
+  requestAnimationFrame(loop);
+}
+function gameOver(){
+  alive=false;
+  document.getElementById('otitle').textContent='💀 Game Over!';
+  document.getElementById('otext').innerHTML='Pikë: <b style="color:#ff0">'+score+'</b><br>Rekord: '+Math.max(best,score);
+  document.getElementById('obtn').textContent='🔄 Luaj përsëri';
+  document.getElementById('overlay').classList.remove('hidden');
+}
+function start(){
+  reset();
+  document.getElementById('overlay').classList.add('hidden');
+  draw();requestAnimationFrame(loop);
+}
+document.getElementById('obtn').onclick=start;
+const keys={ArrowUp:[0,-1],w:[0,-1],W:[0,-1],ArrowDown:[0,1],s:[0,1],S:[0,1],ArrowLeft:[-1,0],a:[-1,0],A:[-1,0],ArrowRight:[1,0],d:[1,0],D:[1,0]};
+document.addEventListener('keydown',e=>{
+  if(e.key===' '||e.key==='Enter'){if(!alive)start();return;}
+  const k=keys[e.key];
+  if(k&&!(dir.x===-k[0]&&dir.y===-k[1])&&!(dir.x===k[0]&&dir.y===k[1])){ndir={x:k[0],y:k[1]};e.preventDefault();}
+});
+let tx=0,ty=0;
+cv.addEventListener('touchstart',e=>{const t=e.changedTouches[0];tx=t.clientX;ty=t.clientY;e.preventDefault();},{passive:false});
+cv.addEventListener('touchmove',e=>{e.preventDefault();},{passive:false});
+cv.addEventListener('touchend',e=>{
+  const t=e.changedTouches[0],dx=t.clientX-tx,dy=t.clientY-ty;
+  if(Math.abs(dx)<12&&Math.abs(dy)<12){if(!alive)start();return;}
+  let k=Math.abs(dx)>Math.abs(dy)?(dx>0?[1,0]:[-1,0]):(dy>0?[0,1]:[0,-1]);
+  if(!(dir.x===-k[0]&&dir.y===-k[1]))ndir={x:k[0],y:k[1]};
+  e.preventDefault();
+},{passive:false});
+cv.addEventListener('mousedown',()=>{if(!alive)start();});
+reset();updScore();draw();
+</script>
+</body>
+</html>
